@@ -33,6 +33,12 @@ class YTBBQueue():
         
         self.training_gallery = self.image_sets.keys()[:split]
         self.testing_gallery = self.image_sets.keys()[split:]
+    
+    def __len__(self):
+        """
+        Length of training and testing gallery
+        """
+        return len(self.training_gallery)+len(self.testing_gallery)
         
     def _batch(self, n, k, gallery, dim_stack=True, data_aug=False):
         """ Args:

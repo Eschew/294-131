@@ -11,10 +11,22 @@ os.putenv('CUDA_VISIBLE_DEVICES', '2')
 IMAGE_SIZE = 256
 DATA_DIR = '/data/efros/ahliu/yt-bb/'
 
-ytbb = utils.YTBBQueue('/data/efros/ahliu/yt-bb/', category='car')
+# Network Specific
 
-im, labels = ytbb.train_batch(5, 2)
 
+ytbb = utils.YTBBQueue('/data/efros/ahliu/yt-bb/')
+print len(ytbb)
+
+def train():
     
+
+def setup():
+    global batch_queue
+    batch_queue = utils.YTBBQueue(DATA_DIR)
     
-    
+
+def main(argv=None):
+    train()
+
+if __name__ == '__main__':
+    tf.app.run()
