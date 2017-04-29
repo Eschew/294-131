@@ -22,7 +22,7 @@ IM_FILES = ['000456.jpg', '000542.jpg', '001150.jpg',
                 '001763.jpg', '004545.jpg']
 IM_FOLDER = '/data/efros/ahliu/yt-bb2/'
 IM_FILES = ['/data/efros/ahliu/yt-bb2/ \
-		ca899NyehXE=14000=person=0.183=0.734=0.051666666=1.jpg']
+        ca899NyehXE=14000=person=0.183=0.734=0.051666666=1.jpg']
 
 
 def vis_detections(im, class_name, dets,ax, thresh=0.5):
@@ -70,32 +70,32 @@ if __name__ == '__main__':
 
     for im_file in IM_FILES:
         print(im_file)
-	    im = cv2.imread(im_file)
+        im = cv2.imread(im_file)
 
-	    # Detect all object classes and regress object bounds
-	    timer = Timer()
-	    timer.tic()
-	    scores, boxes = im_detect(sess, net, im)
-	    timer.toc()
-	    print ('Detection took {:.3f}s for '
-	           '{:d} object proposals').format(timer.total_time, boxes.shape[0])
+        # Detect all object classes and regress object bounds
+        timer = Timer()
+        timer.tic()
+        scores, boxes = im_detect(sess, net, im)
+        timer.toc()
+        print ('Detection took {:.3f}s for '
+               '{:d} object proposals').format(timer.total_time, boxes.shape[0])
 
-	    # Visualize detections for each class
-	    im = im[:, :, (2, 1, 0)]
-	    fig, ax = plt.subplots(figsize=(12, 12))
-	    ax.imshow(im, aspect='equal')
+        # Visualize detections for each class
+        im = im[:, :, (2, 1, 0)]
+        fig, ax = plt.subplots(figsize=(12, 12))
+        ax.imshow(im, aspect='equal')
 
-	    CONF_THRESH = 0.8
-	    NMS_THRESH = 0.3
-	    for cls_ind, cls in enumerate(CLASSES[1:]):
-	        cls_ind += 1 # because we skipped background
-	        cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
-	        cls_scores = scores[:, cls_ind]
-	        dets = np.hstack((cls_boxes,
-	                          cls_scores[:, np.newaxis])).astype(np.float32)
-	        keep = nms(dets, NMS_THRESH)
-	        dets = dets[keep, :]
-	        vis_detections(im, cls, dets, ax, thresh=CONF_THRESH)
+        CONF_THRESH = 0.8
+        NMS_THRESH = 0.3
+        for cls_ind, cls in enumerate(CLASSES[1:]):
+            cls_ind += 1 # because we skipped background
+            cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
+            cls_scores = scores[:, cls_ind]
+            dets = np.hstack((cls_boxes,
+                              cls_scores[:, np.newaxis])).astype(np.float32)
+            keep = nms(dets, NMS_THRESH)
+            dets = dets[keep, :]
+            vis_detections(im, cls, dets, ax, thresh=CONF_THRESH)
 
     plt.show()
 
