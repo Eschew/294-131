@@ -1,7 +1,12 @@
+import os, sys
+
 import matplotlib.pyplot as plt
 import numpy as np
-import os, sys, cv2
+import cv2
+
+import _init_paths
 from fast_rcnn.nms_wrapper import nms
+
 
 os.putenv('CUDA_VISIBLE_DEVICES', '1')
 
