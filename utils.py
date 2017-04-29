@@ -8,12 +8,13 @@ import collections
 # GLOBAL CONSTANTS
 IMAGE_SIZE = 256
 
+
 class YTBBQueue():
     def __init__(self, directory, train_percentage=.95, category=""):
         """
         Directory of images, directory should have '/' at end
-        Category: To only load images of a specific cateogry. If none,
-                then all will be loaded
+        Category [list of string]: To only load images of a specific cateogry. 
+               If none, then all will be loaded
         """
         assert train_percentage < 1.
         assert train_percentage > 0.
@@ -34,101 +35,67 @@ class YTBBQueue():
         self.training_gallery = self.image_sets.keys()[:split]
         self.testing_gallery = self.image_sets.keys()[split:]
     
+    def train_examples(self, batch_size, k, aug=True):
+        """
+        batch_size: Number of galleries to access
+        k: Number of images to pick from gallery
+        Every combination of image
+        Returns ((batch_size*k)**2, im_size, im_size, 3) for the first set of images
+        and ((batch_size*k)**2, im_size, im_size, 3) for the second set of images
+        
+        There are a total of batch_size*k*k positive examples
+        
+        """
+        num_ids = len(self.training_gallery)
+        idx = np.random.choice(np.arange(num_ids), size=batch_size, replace=False)
+        ids = [self.training_gallery[i] for i in idx]
+        
+        selected_ims = []
+        
+        for i in ids:
+            num_ims = len(self.image_sets[i])
+            idx2 = np.random.choice(np.arange(num_ims), size=k, replace=True)
+            idx2 = [self.image_sets[i][j] for j in idx2]
+            for j in idx2:
+                im = skio.imread(self.dir+j)
+                im = (im-np.mean(im))
+                selected_ims.append((i, im))# imageset, image x256 x256
+        
+        labels = []
+        batch1 = []
+        batch2 = []
+        for i in selected_ims:
+            for j in selected_ims:
+                if i[0] == j[0]:
+                    labels.append([1., 0.])
+                else:
+                    labels.append([0., 1.])
+                
+                batch1.append(i[1])
+                batch2.append(j[1])
+         
+        return self.__batch(batch1, batch2, labels)
+        
+              
+                
+    def __batch(self, batch1, batch2, labels):
+        """ batch1: list of len batch_size with 256,256,3 images
+            batch2: list of len batch_size with 256,256,3 images
+            labels: list of 1., 0. of len batch_size
+            returns: (batch_size, 256, 256, 3), (batch_size, 256, 256, 3), 
+                (batch_size, 1) np arrays
+            
+        """
+        assert len(batch1) == len(labels), "Label and batches dim don't line up."
+        assert len(batch2) == len(labels), "Label and batches dim don't line up."
+        batch1 = np.array(batch1).reshape((-1, 256, 256, 3))
+        batch2 = np.array(batch2).reshape((-1, 256, 256, 3))
+        labels = np.array(labels).reshape((-1, 2))
+        return batch1, batch2, labels
+        
     def __len__(self):
         """
         Length of training and testing gallery
         """
         return len(self.training_gallery)+len(self.testing_gallery)
         
-    def _batch(self, n, k, gallery, dim_stack=True, data_aug=False):
-        """ Args:
-              n - The number of image sets to collect
-              k - The number of images to take from an image set
-              dim_stack - Whether to stack the dimensions.
-              data_aug - Whether to use data augmentation
-        """
-        ind = np.arange(len(gallery))
-        chosen = np.random.choice(ind, n, replace=False)
-        
-        images = [] # List of the bounding_box_cropped
-        
-        for ind in chosen:
-            image_set_id = gallery[ind]
-            images_from_set = self.image_sets[image_set_id]
-            chosen2 = np.random.choice(np.arange(len(images_from_set)), k, replace=True)
-            files = [images_from_set[ind2] for ind2 in chosen2]
-            for fi in files:
-                im = skio.imread(self.dir+fi)
-                tokens = fi.split('.jpg')[0].split('=')
-            
-                xmin, xmax, ymin, ymax = float(tokens[3]), float(tokens[4]), float(tokens[5]), float(tokens[6])
-                
-                xmin = max(int(im.shape[0]*xmin)-1, 0)
-                xmax = min(int(im.shape[0]*xmax)+1, im.shape[0])
-                ymin = max(int(im.shape[1]*ymin)-1, 0)
-                ymax = min(int(im.shape[1]*ymax)+1, im.shape[0])
-                cropped = im[ymin:ymax, xmin:xmax]
-                
-                im = scipy.misc.imresize(cropped, (IMAGE_SIZE, IMAGE_SIZE))
-                images.append((im, image_set_id))
-        
-        batch = []
-        labels = []
-        for i in range(len(images)):
-            for j in range(len(images)):
-                im1, im1_id = images[i][0], images[i][1]
-                im2, im2_id = images[j][0], images[j][1]
-                
-                if im1_id == im2_id:
-                    labels.append(1.)
-                else:
-                    labels.append(0.)
-                
-                if data_aug:
-                    print "NOT IMPLEMENTED YET"
-                
-                if dim_stack:
-                    batch.append(np.stack([im1, im2], 0))
-                 
-                
-        return self._format_output(batch, labels)
-        
-        
-    def train_batch(self, n, k=3,dim_stack=True, data_aug=False):
-        """
-        n: How many image_sets to use.
-        k: How many images to take from an image_set
-        
-        The actual size of the batch will be the set of 
-        every pair of images ((nk)^2).
-        
-        dim_stack is used for training image on separate networks
-            True: images: ((nk)^2, 2, IMAGE_SIZE, IMAGE_SIZE, 3)
-                  labels: ((nk)^2, 1)
-        
-        """
-        assert n < 20, "20 images = 400 batch_size"
-        return self._batch(n, k, self.training_gallery, dim_stack=dim_stack, data_aug=data_aug)
-    
-    def _format_output(self, batch, labels):
-        return np.array(batch), np.array([labels]).T
-        
-
-    def test_batch(self, n, k=3, dim_stack=True, data_aug=False):
-        """
-        n: How many image_sets to use.
-        k: How many images to take from an image_set
-        
-        The actual size of the batch will be the set of 
-        every pair of images ((nk)^2).
-        
-        dim_stack is used for training image on separate networks
-            True: images: ((nk)^2, 2, IMAGE_SIZE, IMAGE_SIZE, 3)
-                  labels: ((nk)^2, 1)
-        
-        """
-        assert n < 20, "20 images = 400 batch_size"
-        return self._batch(n, k, self.testing_gallery, dim_stack=dim_stack, data_aug=data_aug)
-            
-        
-            

@@ -7,12 +7,12 @@ import cv2
 import scipy
 
 """
-Downlaods yt-bb dataset and stores into csv_dir
-Downsamples each image to 256x256x3
+Downloads yt-bb dataset and stores into csv_dir
+Crops each image as is and then saves them
 """
 
 # CONSTANTS:
-SAVE_DIR = '/data/efros/ahliu/yt-bb/'
+SAVE_DIR = '/data/efros/ahliu/yt-bb2/'
 CSV_DIR = '/data/efros/ahliu/yt_bb_detection_train.csv'
 DELIM = '=' # _ and - are both used in yt-id
 temp_dir = SAVE_DIR+'temp_vid.mp4'
@@ -50,9 +50,18 @@ for row in reader:
             cap = cv2.VideoCapture(temp_dir)
 
         cap.set(cv2.cv.CV_CAP_PROP_POS_MSEC, time)
-        ret, frames = cap.read()
-        frames = cv2.resize(frames, (256, 256)) 
-        cv2.imwrite(save_name, frames)
+        ret, im = cap.read()
+        if type(im) == type(None):
+            continue
+        xmin, xmax, ymin, ymax = float(xmin), float(xmax), float(ymin), float(ymax)
+        
+        xmin = max(int(im.shape[0]*xmin)-1, 0)
+        xmax = min(int(im.shape[0]*xmax)+1, im.shape[0])
+        ymin = max(int(im.shape[1]*ymin)-1, 0)
+        ymax = min(int(im.shape[1]*ymax)+1, im.shape[0])
+        im = im[xmin:xmax, ymin:ymax]
+        im = cv2.resize(im, (IMAGE_SIZE, IMAGE_SIZE))
+        cv2.imwrite(save_name, im)
         print "Wrote %s" % save_name
     except subprocess.CalledProcessError as e:
         f.write("Error downloading video: %s\n\n" % e)
