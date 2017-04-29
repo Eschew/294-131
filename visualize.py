@@ -1,14 +1,7 @@
-import _init_paths
-import tensorflow as tf
-from fast_rcnn.config import cfg
-from fast_rcnn.test import im_detect
-from fast_rcnn.nms_wrapper import nms
-from utils.timer import Timer
 import matplotlib.pyplot as plt
 import numpy as np
 import os, sys, cv2
-import argparse
-from networks.factory import get_network
+from fast_rcnn.nms_wrapper import nms
 
 os.putenv('CUDA_VISIBLE_DEVICES', '1')
 
@@ -21,12 +14,15 @@ CLASSES = ('__background__',
            'sheep', 'sofa', 'train', 'tvmonitor')
 
 FRCN_ROOT = '/home/ahliu/Faster-RCNN_TF/'
+FRCN_ROOT = '/mnt/c/Users/Dennis/Dropbox/UC Berkeley/Classes/Spring 2017/CS 294-131/project/Faster-RCNN_TF'
+PROJECT_ROOT = os.path.join(FRCN_ROOT, '294-131')
 MODEL_FILE = FRCN_ROOT + 'VGGnet_fast_rcnn_iter_70000.ckpt'
 
 IM_ROOT = '/data/efros/ahliu/yt-bb2/'
+IM_ROOT = os.path.join(PROJECT_ROOT, 'input')
 IM_FILES = ['ca899NyehXE=14000=person=0.183=0.734=0.051666666=1.jpg']
 
-OUTPUT_ROOT = FRCN_ROOT + '294-131/output/'
+OUTPUT_ROOT = os.path.join(PROJECT_ROOT, 'output')
 
 def vis_detections(im, class_name, dets,ax, thresh=0.5):
     """Draw detected bounding boxes."""
@@ -57,12 +53,13 @@ def vis_detections(im, class_name, dets,ax, thresh=0.5):
     plt.tight_layout()
     plt.draw()
 
-if __name__ == '__main__':
-    cfg.TEST.HAS_RPN = True  # Use RPN for proposals
-       
+if __name__ == '__main__':       
     for im_file in IM_FILES:
-        np.load(os.path.join(OUTPUT_ROOT, 'scores', im_file), scores)
-        np.load(os.path.join(OUTPUT_ROOT, 'boxes', im_file), scores)
+        print(im_file)
+        im = cv2.imread(os.path.join(IM_ROOT, im_file))
+
+        scores = np.load(os.path.join(OUTPUT_ROOT, 'scores', im_file + '.npy'))
+        boxes = np.load(os.path.join(OUTPUT_ROOT, 'boxes', im_file + '.npy'))
         
         # Visualize detections for each class
         im = im[:, :, (2, 1, 0)]
