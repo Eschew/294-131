@@ -25,7 +25,7 @@ MODEL_FILE = FRCN_ROOT + 'VGGnet_fast_rcnn_iter_70000.ckpt'
 
 # IM_ROOT = '/data/efros/ahliu/yt-bb2/'
 IM_ROOT = os.path.join(PROJECT_ROOT, 'input')
-IM_FILES = ['ca899NyehXE=14000=person=0.183=0.734=0.051666666=1.jpg']
+IM_FILES = os.listdir(IM_ROOT)
 
 OUTPUT_ROOT = os.path.join(PROJECT_ROOT, 'output')
 
