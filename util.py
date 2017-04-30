@@ -1,5 +1,6 @@
 import os
 import scipy
+import scipy.misc
 import skimage as sk
 import skimage.io as skio
 import numpy as np
@@ -20,7 +21,7 @@ class YTBBQueue():
         assert train_percentage > 0.
         self.dir = directory
         
-        file_dir = [i for i in os.listdir(directory) if '.jpg' in i and category in i]
+        file_dir = [i for i in os.listdir(directory) if '.jpg' in i and i.split("=")[3] in category]
         self.image_sets = collections.defaultdict(list)
         if len(file_dir) == 0:
             raise Exception("The cateogry %s did not return any images."%category)
@@ -28,12 +29,12 @@ class YTBBQueue():
         # Set up tree structure
         for im_file in file_dir:
             tokens = im_file.split('=')
-            self.image_sets[tokens[0]].append(im_file)
+            self.image_sets[tokens[0]+"="+tokens[1]].append(im_file)
             
         split = int(len(self.image_sets.keys())*train_percentage)
         
-        self.training_gallery = self.image_sets.keys()[:split]
-        self.testing_gallery = self.image_sets.keys()[split:]
+        self.training_gallery = list(self.image_sets)[:split]
+        self.testing_gallery = list(self.image_sets)[split:]
     
     def train_examples(self, batch_size, k, aug=True):
         """
@@ -58,7 +59,15 @@ class YTBBQueue():
             idx2 = [self.image_sets[i][j] for j in idx2]
             for j in idx2:
                 im = skio.imread(self.dir+j)
-                im = (im-np.mean(im))
+                tokens = j.split(".jpg")[0].split("=")
+                xmin = max(int(float(tokens[4])*IMAGE_SIZE)-1, 0)
+                xmax = min(int(float(tokens[5])*IMAGE_SIZE)+1, IMAGE_SIZE)
+                ymin = max(int(float(tokens[6])*IMAGE_SIZE)-1, 0)
+                ymax = min(int(float(tokens[7])*IMAGE_SIZE)+1, IMAGE_SIZE)
+                
+                im = im[ymin:ymax, xmin:xmax]
+                im = scipy.misc.imresize(im, (IMAGE_SIZE, IMAGE_SIZE))
+                # im = (im-np.mean(im)) #mean center pixels
                 selected_ims.append((i, im))# imageset, image x256 x256
         
         labels = []

@@ -5,16 +5,16 @@ import numpy as np
 import siamese_model as sm
 
 import os
-import util
+import utils
 
 # Set up environment variables
-os.putenv('CUDA_VISIBLE_DEVICES', '0')
+os.putenv('CUDA_VISIBLE_DEVICES', '0,2')
 
 # Global Constants
 IMAGE_SIZE = 256
-DATA_DIR = '/data/efros/ahliu/yt-bb2/'
+DATA_DIR = '/data/efros/ahliu/yt-bb4/'
 NUM_CLASSES = 2
-checkpoint_dir = '/data/efros/ahliu/294-131/checkpoints/siamese-person'
+checkpoint_dir = '/home/ahliu/294-131/checkpoints/siamese-multi'
 
 # Global  Variables
 batch_queue = None
@@ -38,7 +38,7 @@ def train():
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         for step in range(20001):
-            (batch1, batch2, labels) = batch_queue.train_examples(3, 2)
+            (batch1, batch2, labels) = batch_queue.train_examples(3, 4)
             if step%1000 == 0:
                 saver.save(sess, checkpoint_dir, global_step=step)
                 print "Saved model to: "+checkpoint_dir
@@ -51,8 +51,9 @@ def setup():
     global pl_inp1
     global pl_inp2
     global pl_exp
-    
-    batch_queue = util.YTBBQueue(DATA_DIR, category="person")
+    cat = "airplane,bird,boat,bus,car,cat,cow,dog,horse,person,train"
+    cats = cat.split(",")
+    batch_queue = utils.YTBBQueue(DATA_DIR, category=cats)
     pl_inp1 = tf.placeholder(tf.float32, (None, 256, 256, 3))
     pl_inp2 = tf.placeholder(tf.float32, (None, 256, 256, 3))
     
