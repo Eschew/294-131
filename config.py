@@ -28,3 +28,6 @@ if not os.path.exists(OUTPUT_SET):
 	os.mkdir(OUTPUT_SET_BOXES)
 
 IMAGE_SIZE = 128
+
+NMS_THRESH = 0.3
+CONF_THRESH = 0.8
