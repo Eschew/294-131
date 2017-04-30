@@ -57,5 +57,8 @@ if __name__ == '__main__':
     saver.restore(sess, MODEL_FILE)
 
     videos = [] # TODO: properly load videos
+    tracks = []
     for video in videos:
       track = process_sequence(video)
+      tracks.append(track)
+    np.save(os.path.join(OUTPUT_ROOT, 'tracks'), tracks)
