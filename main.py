@@ -44,29 +44,17 @@ def setup():
     
     pl_inp1 = tf.placeholder(tf.float32, (None, 256, 256, 3))
     pl_inp2 = tf.placeholder(tf.float32, (None, 256, 256, 3))
-    pl_exp = tf.placeholder(tf.float32, (None, NUM_CLASSES))
-
-    
-    feature1 = sm.featurize(pl_inp1)
-    feature2 = sm.featurize(pl_inp2)
-    (agg, h, logits) = sm.inference_sim(feature1, feature2)
-    smax = tf.nn.softmax(logits)
-    
-    restorer = tf.train.Saver()
-    restorer.restore(sess, "/home/ahliu/294-131/checkpoints/siamese-multi-1000")
-    return smax
     
     
     
-    
-def get_affinity(sess, im1, im2):
-  return predict(sess, im1, im2)
+def get_affinity(im1, im2):
+  return predict(im1, im2)
 
 def crop_and_resize(im, bbox, size=(IMAGE_SIZE, IMAGE_SIZE)):
   x1, y1, x2, y2 = bbox.astype(int)
   return cv2.resize(im[x1:x2, y1:y2], size, interpolation=cv2.INTER_AREA)
 
-def compute_track(sess, video):
+def compute_track(video):
   track = []
   for im in video:
       scores, bboxes = im_detect(sess, net, im)
@@ -84,7 +72,7 @@ def compute_track(sess, video):
 
       track_im = crop_and_resize(im, track[-1])
       bbox_ims = [crop_and_resize(im, bbox) for bbox in bboxes]
-      affinities = [get_affinity(sess, track_im, bbox_im) for bbox_im in bbox_ims]
+      affinities = [get_affinity(track_im, bbox_im) for bbox_im in bbox_ims]
       track.append(bboxes[np.argmax(affinities)])
 
       # TODO: use kalman filter if affinity too low
@@ -99,8 +87,6 @@ def load_videos(yt_id_obj_id):
   return frames
 
 if __name__ == '__main__':
-    # Setup for siamese weights
-    setup()
     
     cfg.TEST.HAS_RPN = True  # Use RPN for proposals
 
@@ -108,10 +94,18 @@ if __name__ == '__main__':
     net = get_network('VGGnet_test')
     saver = tf.train.Saver(write_version=tf.train.SaverDef.V1)
     saver.restore(sess, MODEL_FILE)
+    
+    
+    # Setup for siamese weights
+    setup()
+    feature1 = sm.featurize(pl_inp1)
+    feature2 = sm.featurize(pl_inp2)
+    smax = tf.nn.softmax(sm.inference_sim(feature1, feature2)[2])
+    saver.restore(sess, SIAMESE_WEIGHTS)
 
     videos = [load_videos("ZFSspVdQ_1M=0")]
     tracks = []
     for video in videos:
-      track = compute_track(sess, video)
+      track = compute_track(video)
       tracks.append(track)
     np.save(os.path.join(OUTPUT_ROOT, 'tracks'), tracks)
