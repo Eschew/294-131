@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 import cv2
 
 from fast_rcnn.nms_wrapper import nms
-from config import CLASSES, FRCN_ROOT, PROJECT_ROOT, MODEL_FILE, \
-    IM_GROUP, IM_ROOT, IM_FILES, OUTPUT_ROOT
+from config import *
 
 CONF_THRESH = 0.2 # 0.8
 NMS_THRESH = 0.3 # 0.3
@@ -47,9 +46,9 @@ if __name__ == '__main__':
                 wspace=0, hspace=0)
     for j in range(num_frames):
         im_file = IM_FILES[i*num_frames + j]
-        im = cv2.imread(os.path.join(IM_ROOT, im_file))[:, :, (2, 1, 0)]
-        scores = np.load(os.path.join(OUTPUT_ROOT, 'scores', im_file + '.npy'))
-        boxes = np.load(os.path.join(OUTPUT_ROOT, 'boxes', im_file + '.npy'))
+        im = cv2.imread(os.path.join(INPUT_SET, im_file))[:, :, (2, 1, 0)]
+        scores = np.load(os.path.join(OUTPUT_SET_SCORES, im_file + '.npy'))
+        boxes = np.load(os.path.join(OUTPUT_SET_BOXES, im_file + '.npy'))
         
         # Visualize detections for each class]
         ax = axarr[j/cols][j%cols]

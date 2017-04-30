@@ -13,8 +13,7 @@ from fast_rcnn.nms_wrapper import nms
 from utils.timer import Timer
 from networks.factory import get_network
 
-from config import CLASSES, FRCN_ROOT, PROJECT_ROOT, MODEL_FILE, \
-    IM_GROUP, IM_ROOT, IM_FILES, OUTPUT_ROOT
+from config import *
 
 os.putenv('CUDA_VISIBLE_DEVICES', '1')
 
@@ -34,7 +33,7 @@ if __name__ == '__main__':
 
     for im_file in IM_FILES:
         print(im_file)
-        im = cv2.imread(os.path.join(IM_ROOT, im_file))
+        im = cv2.imread(os.path.join(INPUT_SET, im_file))
 
         # Detect all object classes and regress object bounds
         timer = Timer()
@@ -44,5 +43,5 @@ if __name__ == '__main__':
         print ('Detection took {:.3f}s for '
                '{:d} object proposals').format(timer.total_time, boxes.shape[0])
         
-        np.save(os.path.join(OUTPUT_ROOT, 'scores', im_file), scores)
-        np.save(os.path.join(OUTPUT_ROOT, 'boxes', im_file), boxes)
+        np.save(os.path.join(OUTPUT_SET_SCORES, im_file), scores)
+        np.save(os.path.join(OUTPUT_SET_BOXES, im_file), boxes)
