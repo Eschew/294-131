@@ -10,7 +10,7 @@ CLASSES = ('__background__',
            'sheep', 'sofa', 'train', 'tvmonitor')
 
 FRCN_ROOT = os.path.join(HOME_DIR, 'Faster-RCNN_TF')
-MODEL_FILE = FRCN_ROOT + 'VGGnet_fast_rcnn_iter_70000.ckpt'
+MODEL_FILE = os.path.join(FRCN_ROOT, 'VGGnet_fast_rcnn_iter_70000.ckpt')
 
 PROJECT_ROOT = os.path.join(HOME_DIR, '294-131')
 INPUT_ROOT = os.path.join(PROJECT_ROOT, 'input')
