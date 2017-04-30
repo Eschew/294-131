@@ -5,7 +5,7 @@ import numpy as np
 import siamese_model as sm
 
 import os
-import utils
+import util
 
 # Set up environment variables
 os.putenv('CUDA_VISIBLE_DEVICES', '0')
@@ -52,7 +52,7 @@ def setup():
     global pl_inp2
     global pl_exp
     
-    batch_queue = utils.YTBBQueue(DATA_DIR, category="person")
+    batch_queue = util.YTBBQueue(DATA_DIR, category="person")
     pl_inp1 = tf.placeholder(tf.float32, (None, 256, 256, 3))
     pl_inp2 = tf.placeholder(tf.float32, (None, 256, 256, 3))
     

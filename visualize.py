@@ -1,33 +1,12 @@
 import os, sys
 
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 import cv2
 
-import _init_paths
 from fast_rcnn.nms_wrapper import nms
-
-
-os.putenv('CUDA_VISIBLE_DEVICES', '1')
-
-
-CLASSES = ('__background__',
-           'aeroplane', 'bicycle', 'bird', 'boat',
-           'bottle', 'bus', 'car', 'cat', 'chair',
-           'cow', 'diningtable', 'dog', 'horse',
-           'motorbike', 'person', 'pottedplant',
-           'sheep', 'sofa', 'train', 'tvmonitor')
-
-# FRCN_ROOT = '/home/ahliu/Faster-RCNN_TF/'
-FRCN_ROOT = '/mnt/c/Users/Dennis/Dropbox/UC Berkeley/Classes/Spring 2017/CS 294-131/project/Faster-RCNN_TF'
-PROJECT_ROOT = os.path.join(FRCN_ROOT, '294-131')
-MODEL_FILE = FRCN_ROOT + 'VGGnet_fast_rcnn_iter_70000.ckpt'
-
-IM_GROUP = 'set1'
-# IM_ROOT = '/data/efros/ahliu/yt-bb2/'
-IM_ROOT = os.path.join(PROJECT_ROOT, 'input', IM_GROUP)
-IM_FILES = os.listdir(IM_ROOT)
-OUTPUT_ROOT = os.path.join(PROJECT_ROOT, 'output', IM_GROUP)
+from config import CLASSES, FRCN_ROOT, PROJECT_ROOT, MODEL_FILE, \
+    IM_GROUP, IM_ROOT, IM_FILES, OUTPUT_ROOT
 
 CONF_THRESH = 0.2 # 0.8
 NMS_THRESH = 0.3 # 0.3
