@@ -5,7 +5,7 @@ import numpy as np
 import siamese_model as sm
 
 import os
-import utils
+import util
 
 # Set up environment variables
 os.putenv('CUDA_VISIBLE_DEVICES', '0,2')

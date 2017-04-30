@@ -27,9 +27,10 @@ if not os.path.exists(OUTPUT_SET):
 	os.mkdir(OUTPUT_SET_SCORES)
 	os.mkdir(OUTPUT_SET_BOXES)
 
-IMAGE_SIZE = 128
+IMAGE_SIZE = 256
 
 NMS_THRESH = 0.3
 CONF_THRESH = 0.8
 
 SIAMESE_WEIGHTS="/home/ahliu/294-131/checkpoints/siamese-multi-1000"
+DATA_DIR = "/data/efros/ahliu/yt-bb4"
