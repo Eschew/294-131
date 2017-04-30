@@ -43,5 +43,13 @@ if __name__ == '__main__':
         print ('Detection took {:.3f}s for '
                '{:d} object proposals').format(timer.total_time, boxes.shape[0])
         
-        np.save(os.path.join(OUTPUT_SET_SCORES, im_file), scores)
-        np.save(os.path.join(OUTPUT_SET_BOXES, im_file), boxes)
+        # np.save(os.path.join(OUTPUT_SET_SCORES, im_file), scores)
+        # np.save(os.path.join(OUTPUT_SET_BOXES, im_file), boxes)
+
+        for i in range(len(bboxes)):
+          bbox = boxes[i]
+          x1, y1, x2, y2 = bbox.astype(int)
+          im_cropped = im[x1:x2, y1:y2]
+          im_resized = cv2.resize(im_cropped, (IMAGE_SIZE, IMAGE_SIZE),
+              interpolation=cv2.INTER_AREA)
+          # put into siamese network

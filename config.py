@@ -26,3 +26,5 @@ if not os.path.exists(OUTPUT_SET):
 	os.mkdir(OUTPUT_SET)
 	os.mkdir(OUTPUT_SET_SCORES)
 	os.mkdir(OUTPUT_SET_BOXES)
+
+IMAGE_SIZE = 128
