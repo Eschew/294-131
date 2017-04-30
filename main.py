@@ -27,11 +27,11 @@ FRCN_ROOT = '/home/ahliu/Faster-RCNN_TF/'
 PROJECT_ROOT = os.path.join(FRCN_ROOT, '294-131')
 MODEL_FILE = FRCN_ROOT + 'VGGnet_fast_rcnn_iter_70000.ckpt'
 
+IM_GROUP = 'set1'
 # IM_ROOT = '/data/efros/ahliu/yt-bb2/'
-IM_ROOT = os.path.join(PROJECT_ROOT, 'input')
+IM_ROOT = os.path.join(PROJECT_ROOT, 'input', IM_GROUP)
 IM_FILES = os.listdir(IM_ROOT)
-
-OUTPUT_ROOT = os.path.join(PROJECT_ROOT, 'output')
+OUTPUT_ROOT = os.path.join(PROJECT_ROOT, 'output', IM_GROUP)
 
 if __name__ == '__main__':
     cfg.TEST.HAS_RPN = True  # Use RPN for proposals
