@@ -45,6 +45,8 @@ if __name__ == '__main__':
     fig.subplots_adjust(left=0.01, bottom=0.01, right=0.99, top=0.99,
                 wspace=0, hspace=0)
     for j in range(num_frames):
+        if i*num_frames + j >= len(video):
+            continue
         im_file = IM_FILES[i*num_frames + j]
         im = cv2.imread(os.path.join(INPUT_SET, im_file))[:, :, (2, 1, 0)]
         scores = np.load(os.path.join(OUTPUT_SET_SCORES, im_file + '.npy'))
