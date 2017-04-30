@@ -31,3 +31,5 @@ IMAGE_SIZE = 128
 
 NMS_THRESH = 0.3
 CONF_THRESH = 0.8
+
+SIAMESE_WEIGHTS="/home/ahliu/294-131/checkpoints/siamese-multi-1000"

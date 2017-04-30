@@ -17,9 +17,37 @@ from config import *
 
 os.putenv('CUDA_VISIBLE_DEVICES', '1')
 
+# Global  Variables
+pl_inp1 = None
+pl_inp2 = None
+
+
+def setup():
+    global pl_inp1
+    global pl_inp2
+    
+    pl_inp1 = tf.placeholder(tf.float32, (None, 256, 256, 3))
+    pl_inp2 = tf.placeholder(tf.float32, (None, 256, 256, 3))
+    
+def predict(im1, im2):
+    # Inputs two numpy images that are 256x256
+    im1 = im1.reshape((1, 256, 256, 3))
+    im2 = im2.reshape((1, 256, 256, 3))
+    
+    feature1 = sm.featurize(pl_inp1)
+    feature2 = sm.featurize(pl_inp2)
+    (agg, h, logits) = sm.inference_sim(feature1, feature2)
+    smax = tf.nn.softmax(logits)
+    
+    restorer = tf.train.Saver()
+    with tf.Session() as sess:
+        restorer.restore(SIAMESE_WEIGHTS)
+        smax_values = sess.run(smax, feed_dict={pl_inp1:im1, pl_inp2:im2})
+    
+    return smax_values
+    
 def get_affinity(im1, im2):
-  # TODO: replace with siamese network
-  return 1
+  return predict(im1, im2)
 
 def crop_and_resize(image, bbox, size=(IMAGE_SIZE, IMAGE_SIZE)):
   x1, y1, x2, y2 = bbox.astype(int)
@@ -49,6 +77,9 @@ def compute_track(video):
       # TODO: use kalman filter if affinity too low
 
 if __name__ == '__main__':
+    # Setup for siamese weights
+    setup()
+    
     cfg.TEST.HAS_RPN = True  # Use RPN for proposals
 
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
@@ -59,6 +90,6 @@ if __name__ == '__main__':
     videos = [] # TODO: properly load videos
     tracks = []
     for video in videos:
-      track = process_sequence(video)
+      track = compute_track(video)
       tracks.append(track)
     np.save(os.path.join(OUTPUT_ROOT, 'tracks'), tracks)

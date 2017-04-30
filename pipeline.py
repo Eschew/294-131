@@ -12,7 +12,7 @@ Crops each image as is and then saves them
 """
 
 # CONSTANTS:
-SAVE_DIR = '/data/efros/ahliu/yt-bb2/'
+SAVE_DIR = '/data/efros/ahliu/yt-bb4/'
 CSV_DIR = '/data/efros/ahliu/yt_bb_detection_train.csv'
 DELIM = '=' # _ and - are both used in yt-id
 temp_dir = SAVE_DIR+'temp_vid.mp4'
@@ -32,11 +32,12 @@ for row in reader:
         # Object is missing from the frames
         continue 
     yt_id = row[0] # youtube-video-id
+    obj_id = row[4]
     time = int(row[1]) # in ms
     category = row[3] # Human Readable String
     xmin, xmax, ymin, ymax = row[6], row[7], row[8], row[9] #Floats
     
-    save_name = SAVE_DIR + yt_id + DELIM + str(time) + DELIM + \
+    save_name = SAVE_DIR + yt_id + DELIM + obj_id+DELIM+str(time) + DELIM + \
                 category + DELIM + xmin + DELIM + \
                 xmax + DELIM +ymin+DELIM + ymax + '.jpg'
             
@@ -53,13 +54,7 @@ for row in reader:
         ret, im = cap.read()
         if type(im) == type(None):
             continue
-        xmin, xmax, ymin, ymax = float(xmin), float(xmax), float(ymin), float(ymax)
-        
-        xmin = max(int(im.shape[0]*xmin)-1, 0)
-        xmax = min(int(im.shape[0]*xmax)+1, im.shape[0])
-        ymin = max(int(im.shape[1]*ymin)-1, 0)
-        ymax = min(int(im.shape[1]*ymax)+1, im.shape[0])
-        im = im[xmin:xmax, ymin:ymax]
+            
         im = cv2.resize(im, (IMAGE_SIZE, IMAGE_SIZE))
         cv2.imwrite(save_name, im)
         print "Wrote %s" % save_name
