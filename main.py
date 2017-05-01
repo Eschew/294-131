@@ -1,4 +1,5 @@
 import os, sys, glob
+import pickle as pkl
 import argparse
 
 import numpy as np
@@ -12,7 +13,6 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import tensorflow.contrib.slim.nets as nets
 import siamese_model as sm
-import siamese_test
 
 from fast_rcnn.config import cfg
 from fast_rcnn.test import im_detect
@@ -58,37 +58,70 @@ def crop_and_resize(im, bbox, size=(IMAGE_SIZE, IMAGE_SIZE)):
 def compute_track(video):
   track = []
   track_debug = []
-  print len(video)
-  for i, im in enumerate(video):
+
+  for t, im in enumerate(video):
       scores, bboxes = im_detect(sess, net, im)
-      bboxes = bboxes.reshape(bboxes.shape[0] * len(CLASSES), 4)
-      scores = scores.reshape(scores.shape[0] * len(CLASSES), 1)
-      print(i, 'proposals', bboxes.shape[0])
-      dets = np.concatenate((bboxes, scores), axis=1)
-      dets = dets[nms(dets, NMS_THRESH), :]
-      dets = dets[dets[:, -1] >= CONF_THRESH, :]
-      bboxes, scores = dets[:, :4], dets[:, -1]
-      print(i, 'proposals thresh', bboxes.shape[0])
-      np.save(os.path.join(OUTPUT_ROOT, "track%d.npy"%i), bboxes)
-      np.save(os.path.join(OUTPUT_ROOT, "track%ds.npy"%i), scores)
-      # track_debug.append(np.concatenate(
-      #   (bboxes, np.reshape(scores, scores.shape + (1,))), axis=1))
-   
-      if len(track) == 0:
+
+      bboxes_thresh = np.zeros((0, 4))
+      scores_thresh = np.zeros((0, 1))
+      for cls_ind, cls in enumerate(CLASSES[1:]):
+            cls_ind += 1 # because we skipped background
+            cls_boxes = bboxes[:, 4*cls_ind:4*(cls_ind + 1)]
+            cls_scores = scores[:, cls_ind]
+            dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])).astype(np.float32)
+            keep = nms(dets, NMS_THRESH)
+            dets = dets[keep, :]
+            inds = np.where(dets[:, -1] >= CONF_THRESH)[0]
+            dets = dets[inds, :]
+            cls_boxes, cls_scores = dets[:, :4], dets[:, -1]
+            bboxes_thresh = np.concatenate((bboxes_thresh, cls_boxes), axis=0)
+            scores_thresh = np.concatenate((scores_thresh, cls_scores[:, np.newaxis]), axis=0)
+      bboxes, scores = bboxes_thresh, scores_thresh
+
+      EMPTY_TRACK = np.zeros(6) # track[:4]=bbox, track[4]=score, track[5]=affinity
+      ZERO_AFFINITY = np.zeros(1)
+      ZERO_AFFINITIES = np.zeros(scores.shape)
+
+      if bboxes.shape[0] == 0:
+        # TODO: replace with kalman filter
+        track.append(EMPTY_TRACK)
+        track_debug.append(np.array([EMPTY_TRACK]))
+        continue
+
+      if t == 0:
         # TODO: change how first bbox is found
         i = np.argmax(scores)
-        track.append(np.concatenate((bboxes[i], np.array([scores[i]]))))
+        track.append(np.concatenate((bboxes[i], scores[i], ZERO_AFFINITY)))
+        track_debug.append(np.concatenate(
+                (bboxes, scores, ZERO_AFFINITIES), axis=1))
         continue
-      # import pdb; pdb.set_trace()
+
+      # find previous non-empty track_elem
+      track_elem = EMPTY_TRACK
+      for elem in track[::-1]:
+           if not np.all(np.equal(track[-1], EMPTY_TRACK)):
+              track_elem = elem
+              break
+
+      if np.all(np.equal(track_elem, EMPTY_TRACK)):
+        # TODO: use kalman filter if no detections
+        i = np.argmax(scores)
+        track.append(np.concatenate((bboxes[i], scores[i], ZERO_AFFINITY)))
+        track_debug.append(np.concatenate(
+                (bboxes, scores, ZERO_AFFINITIES), axis=1))
+        continue
+
       track_im = crop_and_resize(im, track[-1][:4])
       bbox_ims = [crop_and_resize(im, bbox) for bbox in bboxes]
-      #affinities = [get_affinity(track_im, bbox_im) for bbox_im in bbox_ims]
-      #i = np.argmax(affinities)
-      #track.append(np.concatenate((bboxes[i], np.array([scores[i]]))))
-        
-  # TODO: use kalman filter if affinity too low
+      affinities = [get_affinity(track_im, bbox_im) for bbox_im in bbox_ims]
+      affinities = np.reshape(affinities, scores.shape)
 
-  return np.array(track), np.array(track_debug)
+      i = np.argmax(affinities)
+      track.append(np.concatenate((bboxes[i], scores[i], affinities[i])))
+      track_debug.append(np.concatenate((bboxes, scores, affinities), axis=1))
+      # TODO: use kalman filter if affinity too low
+
+  return track, track_debug
 
   
     
@@ -102,13 +135,10 @@ def load_videos(yt_id_obj_id):
   return frames
 
 if __name__ == '__main__':
-    
     cfg.TEST.HAS_RPN = True  # Use RPN for proposals
 
     net = get_network('VGGnet_test')
     saver = tf.train.Saver(write_version=tf.train.SaverDef.V1)
-
-    
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     saver.restore(sess, MODEL_FILE)
     
@@ -120,19 +150,17 @@ if __name__ == '__main__':
     var = tf.contrib.framework.get_variables_to_restore()
     var = [v for v in var if ("siamese/" in v.name)]
     saver = tf.train.Saver(var)
-    # saver.restore(sess, SIAMESE_WEIGHTS)
+    saver.restore(sess, SIAMESE_WEIGHTS)
     
     videos = [load_videos("AA8Besu7Qds=0")]
     tracks = []
     tracks_debug = []
-    for video in videos:
+    for i, video in enumerate(videos):
       track, track_debug = compute_track(video)
       tracks.append(track)
       tracks_debug.append(track_debug)
-    tracks = np.array(tracks)
-    tracks_debug = np.array(tracks_debug)
-    #import pdb; pdb.set_trace()
-    print np.array(tracks).shape
-    print np.array(tracks_debug).shape
-    np.save(os.path.join(OUTPUT_ROOT, 'tracks'), np.array(tracks))
-    np.save(os.path.join(OUTPUT_ROOT, 'tracks_debug'), np.array(tracks_debug))
+
+    with open(os.path.join(OUTPUT_ROOT, 'tracks'), 'wb') as f:
+        pkl.dump(tracks, f)
+    with open(os.path.join(OUTPUT_ROOT, 'tracks_debug'), 'wb') as f:
+        pkl.dump(tracks_debug, f)

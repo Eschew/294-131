@@ -25,7 +25,11 @@ class YTBBQueue():
         assert train_percentage > 0.
         self.dir = directory
         
-        file_dir = [i for i in os.listdir(directory) if '.jpg' in i and i.split("=")[3] in category]
+        if category:
+            file_dir = [i for i in os.listdir(directory) if '.jpg' in i and i.split("=")[3] in category]
+        else:
+             file_dir = [i for i in os.listdir(directory) if '.jpg' in i]
+
         self.image_sets = collections.defaultdict(list)
         if len(file_dir) == 0:
             raise Exception("The cateogry %s did not return any images."%category)
