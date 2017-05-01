@@ -8,6 +8,7 @@ import collections
 import glob
 
 from config import *
+import cv2
 
 # GLOBAL CONSTANTS
 IMAGE_SIZE = 256
@@ -116,7 +117,7 @@ def load_video(yt_id_obj_id):
   ims.sort(key=lambda x: float(x.split("=")[4]))
   frames = []
   for i in ims:
-    im = cv2.imread(i)
-    frames.append(cv2.imread(i));
+    im = skio.imread(i)
+    frames.append(skio.imread(i));
   return frames
         

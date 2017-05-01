@@ -22,6 +22,8 @@ from networks.factory import get_network
 
 from config import *
 
+os.putenv('CUDA_VISIBLE_DEVICES', '2')
+
 # Global  Variables
 pl_inp1 = None
 pl_inp2 = None
@@ -55,32 +57,52 @@ def crop_and_resize(im, bbox, size=(IMAGE_SIZE, IMAGE_SIZE)):
 
 def compute_track(video):
   track = []
+  track_debug = []
   print len(video)
-  for im in video:
+  for i, im in enumerate(video):
       scores, bboxes = im_detect(sess, net, im)
       bboxes = bboxes.reshape(bboxes.shape[0] * len(CLASSES), 4)
       scores = scores.reshape(scores.shape[0] * len(CLASSES), 1)
+      print(i, 'proposals', bboxes.shape[0])
       dets = np.concatenate((bboxes, scores), axis=1)
       dets = dets[nms(dets, NMS_THRESH), :]
       dets = dets[dets[:, -1] >= CONF_THRESH, :]
       bboxes, scores = dets[:, :4], dets[:, -1]
-
+      print(i, 'proposals thresh', bboxes.shape[0])
+      np.save(os.path.join(OUTPUT_ROOT, "track%d.npy"%i), bboxes)
+      np.save(os.path.join(OUTPUT_ROOT, "track%ds.npy"%i), scores)
+      # track_debug.append(np.concatenate(
+      #   (bboxes, np.reshape(scores, scores.shape + (1,))), axis=1))
+   
       if len(track) == 0:
         # TODO: change how first bbox is found
-        track.append(bboxes[np.argmax(scores)])
+        i = np.argmax(scores)
+        track.append(np.concatenate((bboxes[i], np.array([scores[i]]))))
         continue
-
-      track_im = crop_and_resize(im, track[-1])
+      # import pdb; pdb.set_trace()
+      track_im = crop_and_resize(im, track[-1][:4])
       bbox_ims = [crop_and_resize(im, bbox) for bbox in bboxes]
-      affinities = [get_affinity(track_im, bbox_im) for bbox_im in bbox_ims]
-      track.append(bboxes[np.argmax(affinities)])
+      #affinities = [get_affinity(track_im, bbox_im) for bbox_im in bbox_ims]
+      #i = np.argmax(affinities)
+      #track.append(np.concatenate((bboxes[i], np.array([scores[i]]))))
         
-      return track
+  # TODO: use kalman filter if affinity too low
 
-      # TODO: use kalman filter if affinity too low
+  return np.array(track), np.array(track_debug)
+
+  
+    
+def load_videos(yt_id_obj_id):
+  ims = glob.glob(os.path.join(DATA_DIR, yt_id_obj_id)+"*")
+  ims.sort(key=lambda x: float(x.split("=")[4]))
+  frames = []
+  for i in ims:
+    im = cv2.imread(i)
+    frames.append(cv2.imread(i));
+  return frames
 
 if __name__ == '__main__':
-    os.putenv('CUDA_VISIBLE_DEVICES', '2')
+    
     cfg.TEST.HAS_RPN = True  # Use RPN for proposals
 
     net = get_network('VGGnet_test')
@@ -98,11 +120,19 @@ if __name__ == '__main__':
     var = tf.contrib.framework.get_variables_to_restore()
     var = [v for v in var if ("siamese/" in v.name)]
     saver = tf.train.Saver(var)
-    saver.restore(sess, SIAMESE_WEIGHTS)
+    # saver.restore(sess, SIAMESE_WEIGHTS)
     
-    videos = [load_video("ZFSspVdQ_1M=0")]
+    videos = [load_videos("AA8Besu7Qds=0")]
     tracks = []
+    tracks_debug = []
     for video in videos:
-      track = compute_track(video)
+      track, track_debug = compute_track(video)
       tracks.append(track)
-    np.save(os.path.join(OUTPUT_ROOT, 'tracks'), tracks)
+      tracks_debug.append(track_debug)
+    tracks = np.array(tracks)
+    tracks_debug = np.array(tracks_debug)
+    #import pdb; pdb.set_trace()
+    print np.array(tracks).shape
+    print np.array(tracks_debug).shape
+    np.save(os.path.join(OUTPUT_ROOT, 'tracks'), np.array(tracks))
+    np.save(os.path.join(OUTPUT_ROOT, 'tracks_debug'), np.array(tracks_debug))
