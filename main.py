@@ -1,6 +1,5 @@
 import os, sys, glob
 import pickle as pkl
-import argparse
 
 import numpy as np
 import matplotlib as mpl; mpl.use('Agg')
@@ -12,7 +11,6 @@ import skimage.io as skio
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import tensorflow.contrib.slim.nets as nets
-import siamese_model as sm
 
 from fast_rcnn.config import cfg
 from fast_rcnn.test import im_detect
@@ -21,9 +19,9 @@ from utils.timer import Timer
 from networks.factory import get_network
 
 from config import *
+from util import load_video
+import siamese_model as sm
 from kalman_filter import KalmanFilter
-
-os.putenv('CUDA_VISIBLE_DEVICES', '2')
 
 # Global  Variables
 pl_inp1 = None
@@ -37,7 +35,6 @@ def predict(im1, im2):
     smax_values = sess.run(smax, feed_dict={pl_inp1:im1, pl_inp2:im2})
     
     return smax_values
-    
 
 def setup():
     global pl_inp1
@@ -45,8 +42,6 @@ def setup():
     
     pl_inp1 = tf.placeholder(tf.float32, (None, 256, 256, 3))
     pl_inp2 = tf.placeholder(tf.float32, (None, 256, 256, 3))
-    
-    
     
 def get_affinity(im1, im2):
   # returns first logit, which is the prediction of same object
@@ -122,18 +117,8 @@ def compute_track(video):
 
   return track, proposals
 
-  
-    
-def load_videos(yt_id_obj_id):
-  ims = glob.glob(os.path.join(DATA_DIR, yt_id_obj_id)+"*")
-  ims.sort(key=lambda x: float(x.split("=")[4]))
-  frames = []
-  for i in ims:
-    im = cv2.imread(i)
-    frames.append(cv2.imread(i));
-  return frames
-
 if __name__ == '__main__':
+    os.putenv('CUDA_VISIBLE_DEVICES', '2')
     cfg.TEST.HAS_RPN = True  # Use RPN for proposals
 
     net = get_network('VGGnet_test')
@@ -151,7 +136,7 @@ if __name__ == '__main__':
     saver = tf.train.Saver(var)
     saver.restore(sess, SIAMESE_WEIGHTS)
     
-    videos = [load_videos("AA8Besu7Qds=0")]
+    videos = [load_video("AA8Besu7Qds=0")]
     tracks = []
     track_proposals = []
     for i, video in enumerate(videos):
