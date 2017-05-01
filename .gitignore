@@ -3,3 +3,4 @@ config_locals.py
 checkpoints
 input/
 output/
+.ipynb_checkpoints/

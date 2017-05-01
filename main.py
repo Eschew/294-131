@@ -75,7 +75,7 @@ def filter_proposals(scores, bboxes, nms_thresh, conf_thresh):
 
 def compute_track(video):
   track = []
-  track_debug = []
+  proposals = []
 
   object_detected = False
   kalman_filter = None
@@ -89,7 +89,7 @@ def compute_track(video):
       if not object_detected:
         if bboxes.shape[0] == 0:
           track.append(np.zeros(6))
-          track_debug.append(np.zeros((1, 6)))
+          proposals.append(np.zeros((1, 6)))
           continue
         else:
           object_detected = True
@@ -100,7 +100,7 @@ def compute_track(video):
           kalman_filter = KalmanFilter(xhat_0, P_0)
 
           track.append(np.concatenate((bboxes[i], scores[i], affinities[i])))
-          track_debug.append(np.concatenate(bboxes, scores, affinities), axis=1)
+          proposals.append(np.concatenate(bboxes, scores, affinities), axis=1)
           continue
 
       xhat, P = kalman_filter.update_time()
@@ -118,9 +118,9 @@ def compute_track(video):
           score, affinity = scores[i], affinities[i]
 
       track.append(np.concatenate((xhat, score, affinity)))
-      track_debug.append(np.concatenate((bboxes, scores, affinities), axis=1))
+      proposals.append(np.concatenate((bboxes, scores, affinities), axis=1))
 
-  return track, track_debug
+  return track, proposals
 
   
     
@@ -153,13 +153,13 @@ if __name__ == '__main__':
     
     videos = [load_videos("AA8Besu7Qds=0")]
     tracks = []
-    tracks_debug = []
+    track_proposals = []
     for i, video in enumerate(videos):
-      track, track_debug = compute_track(video)
+      track, proposals = compute_track(video)
       tracks.append(track)
-      tracks_debug.append(track_debug)
+      track_proposals.append(proposals)
 
     with open(os.path.join(OUTPUT_ROOT, 'tracks'), 'wb') as f:
         pkl.dump(tracks, f)
-    with open(os.path.join(OUTPUT_ROOT, 'tracks_debug'), 'wb') as f:
-        pkl.dump(tracks_debug, f)
+    with open(os.path.join(OUTPUT_ROOT, 'track_proposals'), 'wb') as f:
+        pkl.dump(track_proposals, f)
