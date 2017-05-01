@@ -32,5 +32,5 @@ IMAGE_SIZE = 256
 NMS_THRESH = 0.3
 CONF_THRESH = 0.8
 
-SIAMESE_WEIGHTS="/home/ahliu/294-131/checkpoints/siamese-multi-1000"
+SIAMESE_WEIGHTS="/home/ahliu/294-131/checkpoints/siamese-multi-10000"
 DATA_DIR = "/data/efros/ahliu/yt-bb4"

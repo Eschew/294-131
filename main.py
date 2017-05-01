@@ -22,7 +22,7 @@ from networks.factory import get_network
 
 from config import *
 
-os.putenv('CUDA_VISIBLE_DEVICES', '1')
+os.putenv('CUDA_VISIBLE_DEVICES', '2')
 
 # Global  Variables
 pl_inp1 = None
@@ -48,7 +48,8 @@ def setup():
     
     
 def get_affinity(im1, im2):
-  return predict(im1, im2)
+  # returns first logit, which is the prediction of same object
+  return predict(im1, im2)[0][0]
 
 def crop_and_resize(im, bbox, size=(IMAGE_SIZE, IMAGE_SIZE)):
   x1, y1, x2, y2 = bbox.astype(int)
@@ -56,6 +57,7 @@ def crop_and_resize(im, bbox, size=(IMAGE_SIZE, IMAGE_SIZE)):
 
 def compute_track(video):
   track = []
+  print len(video)
   for im in video:
       scores, bboxes = im_detect(sess, net, im)
       bboxes = bboxes.reshape(bboxes.shape[0] * len(CLASSES), 4)
@@ -74,6 +76,8 @@ def compute_track(video):
       bbox_ims = [crop_and_resize(im, bbox) for bbox in bboxes]
       affinities = [get_affinity(track_im, bbox_im) for bbox_im in bbox_ims]
       track.append(bboxes[np.argmax(affinities)])
+        
+      return track
 
       # TODO: use kalman filter if affinity too low
     
@@ -90,19 +94,23 @@ if __name__ == '__main__':
     
     cfg.TEST.HAS_RPN = True  # Use RPN for proposals
 
-    sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     net = get_network('VGGnet_test')
     saver = tf.train.Saver(write_version=tf.train.SaverDef.V1)
+
+    
+    sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     saver.restore(sess, MODEL_FILE)
     
-    
-    # Setup for siamese weights
-    setup()
-    feature1 = sm.featurize(pl_inp1)
-    feature2 = sm.featurize(pl_inp2)
-    smax = tf.nn.softmax(sm.inference_sim(feature1, feature2)[2])
+    with tf.variable_scope("siamese/"):
+        setup()
+        feature1 = sm.featurize(pl_inp1)
+        feature2 = sm.featurize(pl_inp2)
+        smax = tf.nn.softmax(sm.inference_sim(feature1, feature2)[2])
+    var = tf.contrib.framework.get_variables_to_restore()
+    var = [v for v in var if ("siamese/" in v.name)]
+    saver = tf.train.Saver(var)
     saver.restore(sess, SIAMESE_WEIGHTS)
-
+    
     videos = [load_videos("ZFSspVdQ_1M=0")]
     tracks = []
     for video in videos:

@@ -1,2 +1,4 @@
 *.pyc
 config_locals.py
+*ipynb*
+checkpoints

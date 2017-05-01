@@ -8,7 +8,7 @@ import os
 import util
 
 # Set up environment variables
-os.putenv('CUDA_VISIBLE_DEVICES', '0')
+os.putenv('CUDA_VISIBLE_DEVICES', '1')
 
 # Global Constants
 IMAGE_SIZE = 256
@@ -23,28 +23,22 @@ pl_inp2 = None
 pl_exp = None
 
 # Network Specific
-def train():
-    with tf.variable_scope("siamese/"): 
-        feature1 = sm.featurize(pl_inp1)
-        feature2 = sm.featurize(pl_inp2)
-
-        (agg, h, logits) = sm.inference_sim(feature1, feature2)
-        loss = sm.loss(logits, pl_exp)
-
-        train_op = sm.train(loss)
-
-        config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
-
-        saver = tf.train.Saver(max_to_keep=20)
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            for step in range(20001):
-                (batch1, batch2, labels) = batch_queue.train_examples(3, 4)
-                if step%1000 == 0:
-                    saver.save(sess, checkpoint_dir, global_step=step)
-                    print "Saved model to: "+checkpoint_dir
-                comp_loss = sess.run([loss, train_op], feed_dict={pl_inp1:batch1, pl_inp2:batch2, pl_exp:labels})
-                print step, comp_loss
+def predict(im1, im2):
+    # Inputs two numpy images that are 256x256
+    im1 = im1.reshape((1, 256, 256, 3))
+    im2 = im2.reshape((1, 256, 256, 3))
+    
+    feature1 = sm.featurize(pl_inp1)
+    feature2 = sm.featurize(pl_inp2)
+    (agg, h, logits) = sm.inference_sim(feature1, feature2)
+    smax = tf.nn.softmax(logits)
+    
+    restorer = tf.train.Saver()
+    with tf.Session() as sess:
+        restorer.restore(sess, "/home/ahliu/294-131/checkpoints/siamese-multi-1000")
+        smax_values = sess.run(smax, feed_dict={pl_inp1:im1, pl_inp2:im2})
+    
+    return smax_values
     
 
 def setup():
@@ -67,7 +61,8 @@ def setup():
 
 def main(argv=None):
     setup()
-    train()
+    (im1, im2, label) = batch_queue.train_examples(1, 1)
+    print predict(im1, im2)
 
 if __name__ == '__main__':
     tf.app.run()
