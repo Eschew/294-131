@@ -33,12 +33,18 @@ class KalmanFilter:
 	def update_time():
 		xhatprime = self.xhats[-1]
 		Pprime = self.Ps[-1] + self.Q
+
+		self.xhats.append(xhatprime)
+		self.Ps.append(Pprime)
 		return xhatprime, Pprime
 
-	def update_measurement(z, R, xhatprime, Pprime):
+	def update_measurement(z):
+		xhatprime, Pprime = self.xhats[-1], self.Ps[-1]
+
 		K = Pprime.dot(np.lingalg.inv(Pprime + self.R))
 		xhat = xhatprime + K*(z - xhatprime)
 		P = (1 - K)*Pprime
-		self.xhats.append(xhat)
-		self.Ps.append(P)
+
+		self.xhats[-1] = xhat
+		self.Ps[-1] = P
 		return xhat, P
