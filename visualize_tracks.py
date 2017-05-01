@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from config import *
+from util import load_video
 
 def visualize_track(video, track):
   rows, cols = 2, 4
@@ -29,7 +30,7 @@ def visualize_track(video, track):
     plt.draw()
 
 if __name__ == '__main__':
-  videos = [] # TODO: properly load videos
+  videos = [load_video("ZFSspVdQ_1M=0")]
   tracks = np.load(os.path.join(OUTPUT_ROOT, 'tracks.npy'))
 
   plt.ion()

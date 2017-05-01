@@ -22,8 +22,6 @@ from networks.factory import get_network
 
 from config import *
 
-os.putenv('CUDA_VISIBLE_DEVICES', '2')
-
 # Global  Variables
 pl_inp1 = None
 pl_inp2 = None
@@ -80,18 +78,9 @@ def compute_track(video):
       return track
 
       # TODO: use kalman filter if affinity too low
-    
-def load_videos(yt_id_obj_id):
-  ims = glob.glob(os.path.join(DATA_DIR, yt_id_obj_id)+"*")
-  ims.sort(key=lambda x: float(x.split("=")[4]))
-  frames = []
-  for i in ims:
-    im = cv2.imread(i)
-    frames.append(cv2.imread(i));
-  return frames
 
 if __name__ == '__main__':
-    
+    os.putenv('CUDA_VISIBLE_DEVICES', '2')
     cfg.TEST.HAS_RPN = True  # Use RPN for proposals
 
     net = get_network('VGGnet_test')
@@ -111,7 +100,7 @@ if __name__ == '__main__':
     saver = tf.train.Saver(var)
     saver.restore(sess, SIAMESE_WEIGHTS)
     
-    videos = [load_videos("ZFSspVdQ_1M=0")]
+    videos = [load_video("ZFSspVdQ_1M=0")]
     tracks = []
     for video in videos:
       track = compute_track(video)

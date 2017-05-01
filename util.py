@@ -5,6 +5,9 @@ import skimage as sk
 import skimage.io as skio
 import numpy as np
 import collections
+import glob
+
+from config import *
 
 # GLOBAL CONSTANTS
 IMAGE_SIZE = 256
@@ -107,4 +110,13 @@ class YTBBQueue():
         Length of training and testing gallery
         """
         return len(self.training_gallery)+len(self.testing_gallery)
+
+def load_video(yt_id_obj_id):
+  ims = glob.glob(os.path.join(DATA_DIR, yt_id_obj_id)+"*")
+  ims.sort(key=lambda x: float(x.split("=")[4]))
+  frames = []
+  for i in ims:
+    im = cv2.imread(i)
+    frames.append(cv2.imread(i));
+  return frames
         
