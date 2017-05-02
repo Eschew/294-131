@@ -152,7 +152,7 @@ if __name__ == '__main__':
     saver = tf.train.Saver(var)
     saver.restore(sess, SIAMESE_WEIGHTS)
     
-    videos = [load_videos("AA8Besu7Qds=0")]
+    videos = [load_videos("ajAuKSOFBKQ=3")]
     tracks = []
     tracks_debug = []
     for i, video in enumerate(videos):
