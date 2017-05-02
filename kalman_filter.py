@@ -30,7 +30,7 @@ class KalmanFilter:
 		self.Q = 0.001*np.identity(P_0.shape[0]) 	# TODO: tune
 		self.R = 1.000*np.identity(P_0.shape[0])	# TODO: tune
 
-	def update_time():
+	def update_time(self):
 		xhatprime = self.xhats[-1]
 		Pprime = self.Ps[-1] + self.Q
 
@@ -38,10 +38,10 @@ class KalmanFilter:
 		self.Ps.append(Pprime)
 		return xhatprime, Pprime
 
-	def update_measurement(z):
+	def update_measurement(self, z):
 		xhatprime, Pprime = self.xhats[-1], self.Ps[-1]
 
-		K = Pprime.dot(np.lingalg.inv(Pprime + self.R))
+		K = Pprime.dot(np.linalg.inv(Pprime + self.R))
 		xhat = xhatprime + K*(z - xhatprime)
 		P = (1 - K)*Pprime
 

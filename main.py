@@ -77,7 +77,7 @@ def compute_track(video):
 
   for t, im in enumerate(video):
       scores, bboxes = im_detect(sess, net, im)
-      scores, bboxes = filter_proposals(scores, bboxes,
+      bboxes, scores = filter_proposals(scores, bboxes,
           nms_thresh=NMS_THRESH, conf_thresh=CONF_THRESH)
       affinities = np.zeros(scores.shape)
 
@@ -92,10 +92,11 @@ def compute_track(video):
           i = np.argmax(scores)
           xhat_0 = bboxes[i]
           P_0 = 256**2/12*np.identity(3) # var = Uniform([0, 255])
+            
           kalman_filter = KalmanFilter(xhat_0, P_0)
 
           track.append(np.concatenate((bboxes[i], scores[i], affinities[i])))
-          proposals.append(np.concatenate(bboxes, scores, affinities), axis=1)
+          proposals.append(np.concatenate([bboxes, scores, affinities], axis=1))
           continue
 
       xhat, P = kalman_filter.update_time()
@@ -136,7 +137,7 @@ if __name__ == '__main__':
     saver = tf.train.Saver(var)
     saver.restore(sess, SIAMESE_WEIGHTS)
     
-    videos = [load_videos("ajAuKSOFBKQ=3")]
+    videos = [load_video("ajAuKSOFBKQ=3")]
     tracks = []
     track_proposals = []
     for i, video in enumerate(videos):
