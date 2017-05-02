@@ -1,6 +1,5 @@
 import os, sys, glob
 import pickle as pkl
-import argparse
 
 import numpy as np
 import matplotlib as mpl; mpl.use('Agg')
@@ -12,7 +11,6 @@ import skimage.io as skio
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import tensorflow.contrib.slim.nets as nets
-import siamese_model as sm
 
 from fast_rcnn.config import cfg
 from fast_rcnn.test import im_detect
@@ -21,8 +19,9 @@ from utils.timer import Timer
 from networks.factory import get_network
 
 from config import *
-
-os.putenv('CUDA_VISIBLE_DEVICES', '2')
+from util import load_video
+import siamese_model as sm
+from kalman_filter import KalmanFilter
 
 # Global  Variables
 pl_inp1 = None
@@ -36,7 +35,6 @@ def predict(im1, im2):
     smax_values = sess.run(smax, feed_dict={pl_inp1:im1, pl_inp2:im2})
     
     return smax_values
-    
 
 def setup():
     global pl_inp1
@@ -44,8 +42,6 @@ def setup():
     
     pl_inp1 = tf.placeholder(tf.float32, (None, 256, 256, 3))
     pl_inp2 = tf.placeholder(tf.float32, (None, 256, 256, 3))
-    
-    
     
 def get_affinity(im1, im2):
   # returns first logit, which is the prediction of same object
@@ -55,86 +51,74 @@ def crop_and_resize(im, bbox, size=(IMAGE_SIZE, IMAGE_SIZE)):
   x1, y1, x2, y2 = bbox.astype(int)
   return cv2.resize(im[x1:x2, y1:y2], size, interpolation=cv2.INTER_AREA)
 
+def filter_proposals(scores, bboxes, nms_thresh, conf_thresh):
+  bboxes_thresh = np.zeros((0, 4))
+  scores_thresh = np.zeros((0, 1))
+  for cls_ind, cls in enumerate(CLASSES[1:]):
+        cls_ind += 1 # because we skipped background
+        cls_boxes = bboxes[:, 4*cls_ind:4*(cls_ind + 1)]
+        cls_scores = scores[:, cls_ind]
+        dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])).astype(np.float32)
+        keep = nms(dets, NMS_THRESH)
+        dets = dets[keep, :]
+        inds = np.where(dets[:, -1] >= CONF_THRESH)[0]
+        dets = dets[inds, :]
+        cls_boxes, cls_scores = dets[:, :4], dets[:, -1]
+        bboxes_thresh = np.concatenate((bboxes_thresh, cls_boxes), axis=0)
+        scores_thresh = np.concatenate((scores_thresh, cls_scores[:, np.newaxis]), axis=0)
+  return bboxes_thresh, scores_thresh
+
 def compute_track(video):
   track = []
-  track_debug = []
+  proposals = []
+
+  object_detected = False
+  kalman_filter = None
 
   for t, im in enumerate(video):
       scores, bboxes = im_detect(sess, net, im)
+      scores, bboxes = filter_proposals(scores, bboxes,
+          nms_thresh=NMS_THRESH, conf_thresh=CONF_THRESH)
+      affinities = np.zeros(scores.shape)
 
-      bboxes_thresh = np.zeros((0, 4))
-      scores_thresh = np.zeros((0, 1))
-      for cls_ind, cls in enumerate(CLASSES[1:]):
-            cls_ind += 1 # because we skipped background
-            cls_boxes = bboxes[:, 4*cls_ind:4*(cls_ind + 1)]
-            cls_scores = scores[:, cls_ind]
-            dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])).astype(np.float32)
-            keep = nms(dets, NMS_THRESH)
-            dets = dets[keep, :]
-            inds = np.where(dets[:, -1] >= CONF_THRESH)[0]
-            dets = dets[inds, :]
-            cls_boxes, cls_scores = dets[:, :4], dets[:, -1]
-            bboxes_thresh = np.concatenate((bboxes_thresh, cls_boxes), axis=0)
-            scores_thresh = np.concatenate((scores_thresh, cls_scores[:, np.newaxis]), axis=0)
-      bboxes, scores = bboxes_thresh, scores_thresh
+      if not object_detected:
+        if bboxes.shape[0] == 0:
+          track.append(np.zeros(6))
+          proposals.append(np.zeros((1, 6)))
+          continue
+        else:
+          object_detected = True
 
-      EMPTY_TRACK = np.zeros(6) # track[:4]=bbox, track[4]=score, track[5]=affinity
-      ZERO_AFFINITY = np.zeros(1)
-      ZERO_AFFINITIES = np.zeros(scores.shape)
+          i = np.argmax(scores)
+          xhat_0 = bboxes[i]
+          P_0 = 256**2/12*np.identity(3) # var = Uniform([0, 255])
+          kalman_filter = KalmanFilter(xhat_0, P_0)
 
-      if bboxes.shape[0] == 0:
-        # TODO: replace with kalman filter
-        track.append(EMPTY_TRACK)
-        track_debug.append(np.array([EMPTY_TRACK]))
-        continue
+          track.append(np.concatenate((bboxes[i], scores[i], affinities[i])))
+          proposals.append(np.concatenate(bboxes, scores, affinities), axis=1)
+          continue
 
-      if t == 0:
-        # TODO: change how first bbox is found
-        i = np.argmax(scores)
-        track.append(np.concatenate((bboxes[i], scores[i], ZERO_AFFINITY)))
-        track_debug.append(np.concatenate(
-                (bboxes, scores, ZERO_AFFINITIES), axis=1))
-        continue
+      xhat, P = kalman_filter.update_time()
+      score, affinity = np.zeros(1), np.zeros(1)
 
-      # find previous non-empty track_elem
-      track_elem = EMPTY_TRACK
-      for elem in track[::-1]:
-           if not np.all(np.equal(track[-1], EMPTY_TRACK)):
-              track_elem = elem
-              break
+      if bboxes.shape[0] > 0:
+        track_im = crop_and_resize(im, track[-1][:4])
+        bbox_ims = [crop_and_resize(im, bbox) for bbox in bboxes]
+        affinities = [get_affinity(track_im, bbox_im) for bbox_im in bbox_ims]
+        affinities = np.reshape(affinities, scores.shape)
 
-      if np.all(np.equal(track_elem, EMPTY_TRACK)):
-        # TODO: use kalman filter if no detections
-        i = np.argmax(scores)
-        track.append(np.concatenate((bboxes[i], scores[i], ZERO_AFFINITY)))
-        track_debug.append(np.concatenate(
-                (bboxes, scores, ZERO_AFFINITIES), axis=1))
-        continue
+        i, aff = np.argmax(affinities), np.max(affinities)
+        if aff > AFF_THRESH:
+          xhat, P = kalman_filter.update_measurement(bboxes[i][:4])
+          score, affinity = scores[i], affinities[i]
 
-      track_im = crop_and_resize(im, track[-1][:4])
-      bbox_ims = [crop_and_resize(im, bbox) for bbox in bboxes]
-      affinities = [get_affinity(track_im, bbox_im) for bbox_im in bbox_ims]
-      affinities = np.reshape(affinities, scores.shape)
+      track.append(np.concatenate((xhat, score, affinity)))
+      proposals.append(np.concatenate((bboxes, scores, affinities), axis=1))
 
-      i = np.argmax(affinities)
-      track.append(np.concatenate((bboxes[i], scores[i], affinities[i])))
-      track_debug.append(np.concatenate((bboxes, scores, affinities), axis=1))
-      # TODO: use kalman filter if affinity too low
-
-  return track, track_debug
-
-  
-    
-def load_videos(yt_id_obj_id):
-  ims = glob.glob(os.path.join(DATA_DIR, yt_id_obj_id)+"*")
-  ims.sort(key=lambda x: float(x.split("=")[4]))
-  frames = []
-  for i in ims:
-    im = cv2.imread(i)
-    frames.append(cv2.imread(i));
-  return frames
+  return track, proposals
 
 if __name__ == '__main__':
+    os.putenv('CUDA_VISIBLE_DEVICES', '2')
     cfg.TEST.HAS_RPN = True  # Use RPN for proposals
 
     net = get_network('VGGnet_test')
@@ -154,13 +138,13 @@ if __name__ == '__main__':
     
     videos = [load_videos("ajAuKSOFBKQ=3")]
     tracks = []
-    tracks_debug = []
+    track_proposals = []
     for i, video in enumerate(videos):
-      track, track_debug = compute_track(video)
+      track, proposals = compute_track(video)
       tracks.append(track)
-      tracks_debug.append(track_debug)
+      track_proposals.append(proposals)
 
     with open(os.path.join(OUTPUT_ROOT, 'tracks'), 'wb') as f:
         pkl.dump(tracks, f)
-    with open(os.path.join(OUTPUT_ROOT, 'tracks_debug'), 'wb') as f:
-        pkl.dump(tracks_debug, f)
+    with open(os.path.join(OUTPUT_ROOT, 'track_proposals'), 'wb') as f:
+        pkl.dump(track_proposals, f)
