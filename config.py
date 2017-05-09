@@ -35,3 +35,5 @@ AFF_THRESH = 0.5
 
 SIAMESE_WEIGHTS="/home/ahliu/294-131/checkpoints/siamese-multi-10000"
 DATA_DIR = "/data/efros/ahliu/yt-bb4"
+
+VIDEO_NAMES = ["auDJ1xtxFlw=0"]

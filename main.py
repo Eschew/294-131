@@ -136,8 +136,8 @@ if __name__ == '__main__':
     var = [v for v in var if ("siamese/" in v.name)]
     saver = tf.train.Saver(var)
     saver.restore(sess, SIAMESE_WEIGHTS)
-    
-    videos = [load_video("ajAuKSOFBKQ=3")]
+
+    videos = [load_video(video_name) for video_name in VIDEO_NAMES]
     tracks = []
     track_proposals = []
     for i, video in enumerate(videos):
