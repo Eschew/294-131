@@ -91,7 +91,7 @@ def compute_track(video):
 
           i = np.argmax(scores)
           xhat_0 = bboxes[i]
-          P_0 = 256**2/12*np.identity(3) # var = Uniform([0, 255])
+          P_0 = 256**2/12*np.identity(4) # var = Uniform([0, 255])
             
           kalman_filter = KalmanFilter(xhat_0, P_0)
 

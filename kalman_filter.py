@@ -42,8 +42,8 @@ class KalmanFilter:
 		xhatprime, Pprime = self.xhats[-1], self.Ps[-1]
 
 		K = Pprime.dot(np.linalg.inv(Pprime + self.R))
-		xhat = xhatprime + K*(z - xhatprime)
-		P = (1 - K)*Pprime
+		xhat = xhatprime + K.dot(z - xhatprime)
+		P = (1 - K).dot(Pprime)
 
 		self.xhats[-1] = xhat
 		self.Ps[-1] = P
