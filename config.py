@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 from config_locals import HOME_DIR
 
@@ -35,5 +36,9 @@ AFF_THRESH = 0.5
 
 SIAMESE_WEIGHTS="/home/ahliu/294-131/checkpoints/siamese-multi-10000"
 DATA_DIR = "/data/efros/ahliu/yt-bb4"
+VIDEO_NAMES = ["Z3KMX_N6WSg=1"]
 
-VIDEO_NAMES = ["auDJ1xtxFlw=0"]
+# Kalman Filter
+P_0 = 256**2/12*np.identity(4) # initial variance = Uniform([0, 255])
+Q = 0.001*np.identity(4)       # noise for each state x
+R = 1.000*np.identity(4)       # noise for each observation z
